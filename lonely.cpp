@@ -87,7 +87,10 @@ int recursion(int a, int b, int mul)
 
 int main(int argc, char* argv[])
 {
-    srand(time(NULL));
+    if(argc == 2)
+        srand(atoi(argv[1]));
+    else
+        srand(time(NULL));
     if ( SDL_Init( SDL_INIT_VIDEO ) < 0 )
     {
         printf( "Unable to init SDL: %s\n", SDL_GetError() );
