@@ -102,9 +102,9 @@ int main(int argc, char* argv[])
         cout << "Seed: " << seed << endl;
         srand(seed);
     }
-    if ( SDL_Init( SDL_INIT_VIDEO ) < 0 )
+    if(SDL_Init(SDL_INIT_VIDEO) < 0)
     {
-        printf( "Unable to init SDL: %s\n", SDL_GetError() );
+        printf("Unable to init SDL: %s\n", SDL_GetError());
         return 1;
     }
 
@@ -112,7 +112,7 @@ int main(int argc, char* argv[])
 
     SDL_Surface* screen = SDL_SetVideoMode(640, 480, 24,
                                            SDL_HWSURFACE|SDL_DOUBLEBUF);
-    if ( !screen )
+    if(!screen)
     {
         printf("Unable to set 640x480 video: %s\n", SDL_GetError());
         return 1;
@@ -130,30 +130,52 @@ int main(int argc, char* argv[])
             min_height = min(min_height, hlines[i][j]);
         }
     double rot_angle = 0;
+    double vert_rot = 0;
+    double horz_rot_mode = 0;
     bool rot_mode = false;
+    int vert_rot_mode = 0;
     bool color_mode = false;
     bool done = false;
-    while (!done)
+    bool do_rotate = true;
+    while(!done)
     {
         if(rot_angle > 2 * M_PI)
             rot_angle -= 2 * M_PI;
         cout << "I will draw a frame now!" << endl;
         SDL_Event event;
-        while (SDL_PollEvent(&event))
+        while(SDL_PollEvent(&event))
         {
-            switch (event.type)
+            switch(event.type)
             {
             case SDL_QUIT:
                 done = true;
                 break;
             case SDL_KEYDOWN:
                 {
-                    if (event.key.keysym.sym == SDLK_ESCAPE)
+                    if(event.key.keysym.sym == SDLK_ESCAPE)
                         done = true;
                     else if(event.key.keysym.sym == SDLK_SPACE)
                         rot_mode = !rot_mode;
                     else if(event.key.keysym.sym == SDLK_e)
                         color_mode = !color_mode;
+                    else if(event.key.keysym.sym == SDLK_DOWN)
+                        vert_rot_mode = 1;
+                    else if(event.key.keysym.sym == SDLK_UP)
+                        vert_rot_mode = -1;
+                    else if(event.key.keysym.sym == SDLK_RIGHT)
+                        horz_rot_mode = 1;
+                    else if(event.key.keysym.sym == SDLK_LEFT)
+                        horz_rot_mode = -1;
+                    else if(event.key.keysym.sym == SDLK_r)
+                        do_rotate = !do_rotate;
+                    break;
+                }
+            case SDL_KEYUP:
+                {
+                    if(event.key.keysym.sym == SDLK_UP || event.key.keysym.sym == SDLK_DOWN)
+                        vert_rot_mode = 0;
+                    else if(event.key.keysym.sym == SDLK_LEFT || event.key.keysym.sym == SDLK_RIGHT)
+                        horz_rot_mode = 0;
                     break;
                 }
             }
@@ -165,17 +187,12 @@ int main(int argc, char* argv[])
             { 
                 int value;
                 int hyp = hypot(i - 320, j - 240);
-                if(hyp == 200)
+                if(hyp >= 200)
                 {
-                    *(ptr++) = 255;
-                    *(ptr++) = 255;
-                    *(ptr++) = 255;
-                }
-                else if(hyp > 200)
-                {
-                    *(ptr++) = 0;
-                    *(ptr++) = 0;
-                    *(ptr++) = 0;
+                    int data = max(0, 255 - 20 * (hyp - 200));
+                    *(ptr++) = data;
+                    *(ptr++) = data * 2 / 3;
+                    *(ptr++) = data * 2 / 3;
                 }
                 else
                 {
@@ -185,16 +202,33 @@ int main(int argc, char* argv[])
                     if(rot_mode)
                     {
                         latitude = asin(hypot(x, y));
-                        longitude = atan(y / x);
+                        longitude = -atan(y / x);
                         if(x < 0)
-                            longitude += M_PI;
+                            longitude -= M_PI;
                     }
                     else
                     {
+                        y /= sin(acos(x));
+                        double a = asin(y);
+                        a += vert_rot;
+                        bool do_swap = false;
+                        if(a > M_PI / 2)
+                        {
+                            a = M_PI - a;
+                            do_swap = true;
+                        }
+                        if(a < -M_PI / 2)
+                        {
+                            a = -M_PI - a;
+                            do_swap = true;
+                        }
+                        y = sin(a) * sin(acos(x));
                         latitude = asin(y);
                         x /= cos(latitude);
                         latitude += M_PI / 2;
                         longitude = asin(x);
+                        if(do_swap)
+                            longitude = M_PI - longitude;
                     }
                     longitude += rot_angle;
                     latitude /= M_PI;
@@ -224,7 +258,16 @@ int main(int argc, char* argv[])
                 }
             }
         SDL_Flip(screen);
-        rot_angle += 0.03;
+        if(do_rotate)
+            rot_angle += 0.03;
+        if(vert_rot_mode > 0)
+            vert_rot = min(M_PI / 2, vert_rot + 0.1);
+        else if(vert_rot_mode < 0)
+            vert_rot = max(-M_PI / 2, vert_rot - 0.1);
+        if(horz_rot_mode > 0)
+            rot_angle += 0.05;
+        else if(horz_rot_mode < 0)
+            rot_angle -= 0.05;
     }
     return 0;
 }
