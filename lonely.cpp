@@ -67,19 +67,26 @@ double pow12(double x)
     return pow(x, 1.2);
 }
 
-int recursion(int a, int b, int mul)
+double diamond_size(double a, double b)
+{
+    b = fabs(2 * b - 1);
+    //return 1;
+    return hypot(1, cos(b * M_PI / 2));
+}
+
+int recursion(int a, int b, int mul, double (*dsz)(double, double))
 {
     pair<int, int> key = make_pair((WIDTH - (a * mul) % WIDTH) % WIDTH, (HEIGHT - (b * mul) % HEIGHT) % HEIGHT);
+    double multiplier = dsz(key.first / (double)WIDTH, key.second / (double)HEIGHT);
     if(data_exists[key])
         return data[key];
     int ans;
     if(a % 2 == 0 && b % 2 == 0)
-        ans = recursion(a / 2, b / 2, mul * 2);
+        ans = recursion(a / 2, b / 2, mul * 2, dsz);
     else if(a % 2 && b % 2)
-        ans = (recursion(a - 1, b - 1, mul)+recursion(a - 1, b + 1, mul)+recursion(a + 1, b - 1, mul)+recursion(a + 1, b + 1, mul)) / 4 + rand() % mul - mul / 2;
+        ans = (recursion(a - 1, b - 1, mul, dsz)+recursion(a - 1, b + 1, mul, dsz)+recursion(a + 1, b - 1, mul, dsz)+recursion(a + 1, b + 1, mul, dsz)) / 4 + multiplier * (rand() % mul - mul / 2);
     else
-        ans = (recursion(a - 1, b, mul)+recursion(a + 1, b, mul)+recursion(a, b - 1, mul)+recursion(a, b + 1, mul)) / 4 + rand() % mul - mul / 2;
-    ans = abs(ans);
+        ans = (recursion(a - 1, b, mul, dsz)+recursion(a + 1, b, mul, dsz)+recursion(a, b - 1, mul, dsz)+recursion(a, b + 1, mul, dsz)) / 4 + multiplier * (rand() % mul - mul / 2);
     data_exists[key] = true;
     data[key] = ans;
     return ans;
@@ -90,7 +97,11 @@ int main(int argc, char* argv[])
     if(argc == 2)
         srand(atoi(argv[1]));
     else
-        srand(time(NULL));
+    {
+        int seed = time(NULL);
+        cout << "Seed: " << seed << endl;
+        srand(seed);
+    }
     if ( SDL_Init( SDL_INIT_VIDEO ) < 0 )
     {
         printf( "Unable to init SDL: %s\n", SDL_GetError() );
@@ -110,11 +121,13 @@ int main(int argc, char* argv[])
     data_exists[make_pair(0, 0)] = data_exists[make_pair(0, WIDTH - 1)] = data_exists[make_pair(WIDTH - 1, 0)] = data_exists[make_pair(WIDTH - 1, HEIGHT - 1)] = true;
     vector<vector<int> > hlines(WIDTH, vector<int>(HEIGHT));
     int max_height = 0;
+    int min_height = 0;
     for(int i = 0; i < WIDTH; i++)
         for(int j = 0; j < HEIGHT; j++)
         {
-            hlines[i][j] = min(255, recursion(i, j, 1));
+            hlines[i][j] = min(255, recursion(i, j, 1, diamond_size));
             max_height = max(max_height, hlines[i][j]);
+            min_height = min(min_height, hlines[i][j]);
         }
     double rot_angle = 0;
     bool rot_mode = false;
@@ -124,7 +137,7 @@ int main(int argc, char* argv[])
     {
         if(rot_angle > 2 * M_PI)
             rot_angle -= 2 * M_PI;
-        cout << "PNZ" << endl;
+        cout << "I will draw a frame now!" << endl;
         SDL_Event event;
         while (SDL_PollEvent(&event))
         {
@@ -189,7 +202,7 @@ int main(int argc, char* argv[])
                     longitude -= floor(longitude);
                     int la = min(HEIGHT - 1., latitude * HEIGHT);
                     int lo = min(WIDTH - 1., longitude * WIDTH);
-                    double h = pow12(hlines[lo][la] / (double)max_height);
+                    double h = pow12((hlines[lo][la] - min_height) / (double)(max_height - min_height));
                     biome b;
                     if(h >= OCEAN_LEVEL)
                         b = get(biome_map_earth, 8, 8, 1 - abs(2 * latitude - 1), 1 - h);
