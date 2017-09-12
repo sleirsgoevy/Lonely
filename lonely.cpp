@@ -58,6 +58,7 @@ biome get(const biome* biome_map, int width, int height, double xd, double yd)
 const int WIDTH = 1024;
 const int HEIGHT = 1024;
 const double OCEAN_LEVEL = 0.3;
+const double ROTATION_SPEED = 0.005;
 
 map<pair<int, int>, bool> data_exists;
 map<pair<int, int>, int> data;
@@ -70,7 +71,6 @@ double pow12(double x)
 double diamond_size(double a, double b)
 {
     b = fabs(2 * b - 1);
-    //return 1;
     return hypot(1, cos(b * M_PI / 2));
 }
 
@@ -133,6 +133,7 @@ int main(int argc, char* argv[])
     bool rot_mode = false;
     bool color_mode = false;
     bool done = false;
+    double vert_rot = 0;
     while (!done)
     {
         if(rot_angle > 2 * M_PI)
@@ -154,6 +155,10 @@ int main(int argc, char* argv[])
                         rot_mode = !rot_mode;
                     else if(event.key.keysym.sym == SDLK_e)
                         color_mode = !color_mode;
+                    else if(event.key.keysym.sym == SDLK_UP)
+                        vert_rot = min(M_PI, vert_rot + 0.03);
+                    else if(event.key.keysym.sym == SDLK_DOWN)
+                        vert_rot = max(-M_PI, vert_rot - 0.03);
                     break;
                 }
             }
@@ -191,10 +196,24 @@ int main(int argc, char* argv[])
                     }
                     else
                     {
-                        latitude = asin(y);
-                        x /= cos(latitude);
+                        bool do_swap = false;
+                        double orig_latitude = latitude = asin(y);
+                        latitude += rot_angle;
+                        if(latitude > M_PI / 2)
+                        {
+                            latitude = M_PI - latitude;
+                            do_swap = true;
+                        }
+                        if(latitude < -M_PI / 2)
+                        {
+                            latitude = -M_PI - latitude;
+                            do_swap = true;
+                        }
+                        x /= cos(orig_latitude);
                         latitude += M_PI / 2;
                         longitude = asin(x);
+                        if(do_swap)
+                            longitude += M_PI;
                     }
                     longitude += rot_angle;
                     latitude /= M_PI;
@@ -224,7 +243,7 @@ int main(int argc, char* argv[])
                 }
             }
         SDL_Flip(screen);
-        rot_angle += 0.03;
+        rot_angle += ROTATION_SPEED;
     }
     return 0;
 }
