@@ -1,4 +1,8 @@
+#ifdef USE_SDL2
+#include <SDL2/SDL.h>
+#else
 #include <SDL/SDL.h>
+#endif
 #include <iostream>
 #include <cstdlib>
 #include <vector>
@@ -107,9 +111,23 @@ int main(int argc, char* argv[])
         printf("Unable to init SDL: %s\n", SDL_GetError());
         return 1;
     }
-
     atexit(SDL_Quit);
-
+#ifdef USE_SDL2
+    SDL_Window* window = SDL_CreateWindow("Lonely", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 640, 480, 0);
+    if(!window)
+    {
+        printf("Unable to set 640x480 video: %s\n", SDL_GetError());
+        return 1;
+    }
+    SDL_Renderer* renderer = SDL_CreateRenderer(window, -1, 0);
+    SDL_Texture* texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGB888, SDL_TEXTUREACCESS_STREAMING, 640, 480);
+    char* buffer = (char*)malloc(640*480*4);
+    if(!buffer)
+    {
+        printf("Unable to allocate frame buffer\n");
+        return 1;
+    }
+#else
     SDL_Surface* screen = SDL_SetVideoMode(640, 480, 24,
                                            SDL_HWSURFACE|SDL_DOUBLEBUF);
     if(!screen)
@@ -117,7 +135,7 @@ int main(int argc, char* argv[])
         printf("Unable to set 640x480 video: %s\n", SDL_GetError());
         return 1;
     }
-
+#endif
     data_exists[make_pair(0, 0)] = data_exists[make_pair(0, WIDTH - 1)] = data_exists[make_pair(WIDTH - 1, 0)] = data_exists[make_pair(WIDTH - 1, HEIGHT - 1)] = true;
     vector<vector<int> > hlines(WIDTH, vector<int>(HEIGHT));
     int max_height = 0;
@@ -180,8 +198,11 @@ int main(int argc, char* argv[])
                 }
             }
         }
+#ifdef USE_SDL2
+        char* ptr = buffer;
+#else
         char* ptr = (char*)screen->pixels;
-        int step = screen->pitch / screen->w;
+#endif
         for(int j = 0; j < 480; j++)
             for(int i = 0; i < 640; i++)
             { 
@@ -256,8 +277,18 @@ int main(int argc, char* argv[])
                         *(ptr++) = min(255, (int)sqrt(b.r));
                     }
                 }
+#ifdef USE_SDL2
+                ptr++;
+#endif
             }
+#ifdef USE_SDL2
+        SDL_UpdateTexture(texture, NULL, buffer, 640 * 4);
+        SDL_RenderClear(renderer);
+        SDL_RenderCopy(renderer, texture, NULL, NULL);
+        SDL_RenderPresent(renderer);
+#else
         SDL_Flip(screen);
+#endif
         if(do_rotate)
             rot_angle += 0.03;
         if(vert_rot_mode > 0)
