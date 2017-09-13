@@ -1,4 +1,4 @@
-#define WIDTH 1024
-#define HEIGHT 1024
+#define WIDTH 4096
+#define HEIGHT 4096
 #define OCEAN_LEVEL 0.3
 

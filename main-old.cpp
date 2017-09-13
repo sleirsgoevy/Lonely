@@ -95,14 +95,38 @@ int main(int argc, char* argv[])
     vector<planet> planets;
     planets.push_back(earth);
 #define earth planets[0]
+    while(true)
+    {
+#ifdef USE_SDL2
+        char* ptr = buffer;
+#else
+        char* ptr = (char*)screen->pixels;
+#endif
+        render3d(ptr, planets);
+#ifdef USE_SDL2
+        SDL_UpdateTexture(texture, NULL, buffer, 640 * 4);
+        SDL_RenderClear(renderer);
+        SDL_RenderCopy(renderer, texture, NULL, NULL);
+        SDL_RenderPresent(renderer);
+#else
+        SDL_Flip(screen);
+#endif
+        planets[0].curr_rot += planets[0].rot_speed;
+        cout << "YUHU!" << endl;
+    }
+    return 0;
+    double rot_angle = 0;
+    double vert_rot = 0;
+    double horz_rot_mode = 0;
+    bool rot_mode = false;
+    int vert_rot_mode = 0;
+    bool color_mode = false;
     bool done = false;
     bool do_rotate = true;
-    int vert_rot_mode = 0;
-    int horz_rot_mode = 0;
     while(!done)
     {
-        if(earth.curr_rot > 2 * M_PI)
-            earth.curr_rot -= 2 * M_PI;
+        if(rot_angle > 2 * M_PI)
+            rot_angle -= 2 * M_PI;
         cout << "I will draw a frame now!" << endl;
         SDL_Event event;
         while(SDL_PollEvent(&event))
@@ -116,6 +140,10 @@ int main(int argc, char* argv[])
                 {
                     if(event.key.keysym.sym == SDLK_ESCAPE)
                         done = true;
+                    else if(event.key.keysym.sym == SDLK_SPACE)
+                        rot_mode = !rot_mode;
+                    else if(event.key.keysym.sym == SDLK_e)
+                        color_mode = !color_mode;
                     else if(event.key.keysym.sym == SDLK_DOWN)
                         vert_rot_mode = 1;
                     else if(event.key.keysym.sym == SDLK_UP)
@@ -143,7 +171,83 @@ int main(int argc, char* argv[])
 #else
         char* ptr = (char*)screen->pixels;
 #endif
-        render3d(ptr, planets);
+        for(int j = 0; j < 480; j++)
+            for(int i = 0; i < 640; i++)
+            { 
+                int value;
+                int hyp = hypot(i - 320, j - 240);
+                if(hyp >= 200)
+                {
+                    int data = max(0, 255 - 20 * (hyp - 200));
+                    *(ptr++) = data;
+                    *(ptr++) = data * 2 / 3;
+                    *(ptr++) = data * 2 / 3;
+                }
+                else
+                {
+                    double x = (i - 320) / 200.0;
+                    double y = (j - 240) / 200.0;
+                    double latitude, longitude;
+                    if(rot_mode)
+                    {
+                        latitude = asin(hypot(x, y));
+                        longitude = -atan(y / x);
+                        if(x < 0)
+                            longitude -= M_PI;
+                    }
+                    else
+                    {
+                        y /= sin(acos(x));
+                        double a = asin(y);
+                        a += vert_rot;
+                        bool do_swap = false;
+                        if(a > M_PI / 2)
+                        {
+                            a = M_PI - a;
+                            do_swap = true;
+                        }
+                        if(a < -M_PI / 2)
+                        {
+                            a = -M_PI - a;
+                            do_swap = true;
+                        }
+                        y = sin(a) * sin(acos(x));
+                        latitude = asin(y);
+                        x /= cos(latitude);
+                        latitude += M_PI / 2;
+                        longitude = asin(x);
+                        if(do_swap)
+                            longitude = M_PI - longitude;
+                    }
+                    longitude += rot_angle;
+                    latitude /= M_PI;
+                    longitude /= 2 * M_PI;
+                    longitude -= floor(longitude);
+                    int la = min(HEIGHT - 1., latitude * HEIGHT);
+                    int lo = min(WIDTH - 1., longitude * WIDTH);
+                    double h = pow12((earth.hlines[lo][la] - earth.min_height) / (double)(earth.max_height - earth.min_height));
+                    biome b;
+                    if(h >= earth.ocean_level)
+                        b = get(earth.biome_map, earth.biome_map_width, earth.biome_map_height, 1 - abs(2 * latitude - 1), 1 - h);
+                    else
+                        b = ocean;
+                    if(color_mode)
+                    {
+                        *(ptr++) = min(255., h * 256);
+                        *(ptr++) = min(255., h * 256);
+                        *(ptr++) = min(255., h * 256);
+                    }
+                    else
+                    {
+                        *(ptr++) = min(255, (int)sqrt(b.b));
+                        *(ptr++) = min(255, (int)sqrt(b.g));
+                        *(ptr++) = min(255, (int)sqrt(b.r));
+                    }
+                }
+#ifdef USE_SDL2
+                ptr++;
+#endif
+            }
 #ifdef USE_SDL2
         SDL_UpdateTexture(texture, NULL, buffer, 640 * 4);
         SDL_RenderClear(renderer);
@@ -153,33 +257,15 @@ int main(int argc, char* argv[])
         SDL_Flip(screen);
 #endif
         if(do_rotate)
-            earth.curr_rot += earth.rot_speed;
-        matrix n;
+            rot_angle += 0.03;
         if(vert_rot_mode > 0)
-            n = n * matrix(
-                1, 0, 0,
-                0, cos(0.1), -sin(0.1),
-                0, sin(0.1), cos(0.1)
-            );
+            vert_rot = min(M_PI / 2, vert_rot + 0.1);
         else if(vert_rot_mode < 0)
-            n = n * matrix(
-                1, 0, 0,
-                0, cos(0.1), sin(0.1),
-                0, -sin(0.1), cos(0.1)
-            );
+            vert_rot = max(-M_PI / 2, vert_rot - 0.1);
         if(horz_rot_mode > 0)
-            n = n * matrix(
-                cos(0.1), -sin(0.1), 0,
-                sin(0.1), cos(0.1), 0,
-                0, 0, 1
-            );
+            rot_angle += 0.05;
         else if(horz_rot_mode < 0)
-            n = n * matrix(
-                cos(0.1), sin(0.1), 0,
-                -sin(0.1), cos(0.1), 0,
-                0, 0, 1
-            );
-        earth.m = earth.m * n;
+            rot_angle -= 0.05;
     }
     return 0;
 }

@@ -17,6 +17,7 @@ struct planet
     int max_height;
     double curr_rot = 0;
     double ocean_level;
+    matrix m;// = matrix(1, 0, 0, 0, 1, 0, 0, 0, 1);
     void generate(int seed);
     biome get(double xd, double yd);
 };

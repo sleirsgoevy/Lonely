@@ -31,8 +31,29 @@ coord ray_x_sphere(coord ray, coord sph_c, double sph_r)
     int ans = solve_square_equation(square_part, linear_part, free_part, z1, z2);
     if(ans == 0)
         return {0, 0, -1};
-    else if(ans == 1)
-        return {ray.x * z1, ray.y * z1, z1};
     else
-        return {ray.x * z2, ray.y * z2, z2};
-} 
+        return {ray.x * z1, ray.y * z1, z1};
+}
+
+matrix matrix::operator*(const matrix& other)
+{
+    matrix ans;
+    for(int i = 0; i < 3; i++)
+        for(int j = 0; j < 3; j++)
+        {
+            ans.data[i][j] = 0;
+            for(int k = 0; k < 3; k++)
+                ans.data[i][j] += data[i][k] * other.data[k][j];
+        }
+    return ans;
+}
+
+double get(double* data, const coord& pos)
+{
+    return data[0] * pos.x + data[1] * pos.y + data[2] * pos.z;
+}
+
+coord matrix::operator*(const coord& pos)
+{
+    return {get(data[0], pos), get(data[1], pos), get(data[2], pos)};
+}
