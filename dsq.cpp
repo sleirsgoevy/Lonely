@@ -1,4 +1,4 @@
-#include "common.hpp"
+#include "dsq.hpp"
 #include "config.h"
 #include <unordered_map>
 
@@ -22,10 +22,10 @@ biome get(const biome* biome_map, int width, int height, double xd, double yd)
     return average(average_left, x2 - xd, average_right, xd - x);
 }
 
-unordered_map<long long, bool> data_exists;
-unordered_map<long long, int> data;
+/*unordered_map<long long, bool> data_exists;
+unordered_map<long long, int> data;*/
 
-int recursion(int a, int b, int mul, double (*dsz)(double, double))
+int diamond_square::recursion(int a, int b, int mul, double (*dsz)(double, double))
 {
     pair<int, int> key = make_pair((WIDTH - (a * mul) % WIDTH) % WIDTH, (HEIGHT - (b * mul) % HEIGHT) % HEIGHT);
     long long lkey = (((long long)key.first) << 32) + (long long)key.second;

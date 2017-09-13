@@ -4,7 +4,8 @@
 #include <SDL/SDL.h>
 #endif
 #include "biome.hpp"
-#include "common.hpp"
+#include "dsq.hpp"
+#include "planet.hpp"
 #include "config.h"
 #include <iostream>
 #include <cstdlib>
@@ -36,29 +37,21 @@ const biome biome_map_earth[64] = {
     arctic, tundra, taiga, forest, veld, desert, savanna, savanna,
     arctic, tundra, taiga, forest, veld, desert, savanna, eq
 };
+
 double pow12(double x)
 {
     return pow(x, 1.2);
 }
 
-double diamond_size(double a, double b)
-{
-    b = fabs(2 * b - 1);
-    //return 1;
-    return hypot(1, cos(b * M_PI / 2));
-}
-
-extern unordered_map<long long, bool> data_exists;
-
 int main(int argc, char* argv[])
 {
+    int seed;
     if(argc == 2)
-        srand(atoi(argv[1]));
+        seed = atoi(argv[1]);
     else
     {
-        int seed = time(NULL);
+        seed = time(NULL);
         cout << "Seed: " << seed << endl;
-        srand(seed);
     }
     if(SDL_Init(SDL_INIT_VIDEO) < 0)
     {
@@ -90,17 +83,23 @@ int main(int argc, char* argv[])
         return 1;
     }
 #endif
-    data_exists[0] = data_exists[WIDTH - 1] = data_exists[(WIDTH - 1LL) << 32] = data_exists[((WIDTH - 1LL) << 32) + HEIGHT - 1] = true;
+/*  diamond_square dsq;
+    dsq.data_exists[0] = dsq.data_exists[WIDTH - 1] = dsq.data_exists[(WIDTH - 1LL) << 32] = dsq.data_exists[((WIDTH - 1LL) << 32) + HEIGHT - 1] = true;
     vector<vector<int> > hlines(WIDTH, vector<int>(HEIGHT));
     int max_height = 0;
     int min_height = 0;
     for(int i = 0; i < WIDTH; i++)
         for(int j = 0; j < HEIGHT; j++)
         {
-            hlines[i][j] = min(255, recursion(i, j, 1, diamond_size));
+            hlines[i][j] = min(255, dsq.recursion(i, j, 1, diamond_size));
             max_height = max(max_height, hlines[i][j]);
             min_height = min(min_height, hlines[i][j]);
-        }
+        }*/
+    planet earth;
+    earth.ocean_level = OCEAN_LEVEL;
+    earth.biome_map = biome_map_earth;
+    earth.biome_map_width = earth.biome_map_height = 8;
+    earth.generate(seed);
     double rot_angle = 0;
     double vert_rot = 0;
     double horz_rot_mode = 0;
@@ -211,13 +210,12 @@ int main(int argc, char* argv[])
                     longitude -= floor(longitude);
                     int la = min(HEIGHT - 1., latitude * HEIGHT);
                     int lo = min(WIDTH - 1., longitude * WIDTH);
-                    double h = pow12((hlines[lo][la] - min_height) / (double)(max_height - min_height));
+                    double h = pow12((earth.hlines[lo][la] - earth.min_height) / (double)(earth.max_height - earth.min_height));
                     biome b;
-                    if(h >= OCEAN_LEVEL)
-                        b = get(biome_map_earth, 8, 8, 1 - abs(2 * latitude - 1), 1 - h);
+                    if(h >= earth.ocean_level)
+                        b = get(earth.biome_map, earth.biome_map_width, earth.biome_map_height, 1 - abs(2 * latitude - 1), 1 - h);
                     else
                         b = ocean;
-                    //lo = (WIDTH + lo % WIDTH) % WIDTH;
                     if(color_mode)
                     {
                         *(ptr++) = min(255., h * 256);
