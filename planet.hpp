@@ -15,8 +15,10 @@ struct planet
     int biome_map_height;
     int min_height;
     int max_height;
-    int ocean_level;
+    double curr_rot = 0;
+    double ocean_level;
     void generate(int seed);
+    biome get(double xd, double yd);
 };
 
 #endif

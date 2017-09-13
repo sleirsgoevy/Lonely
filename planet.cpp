@@ -4,12 +4,13 @@
 #include <cstdlib>
 #include <cmath>
 
+const biome ocean = {0, 0, 65536};
+
 using namespace std;
 
 double diamond_size(double a, double b)
 {
     b = fabs(2 * b - 1);
-    //return 1;
     return hypot(1, cos(b * M_PI / 2));
 }
 
@@ -29,4 +30,11 @@ void planet::generate(int seed)
             max_height = max(max_height, hlines[i][j]);
             min_height = min(min_height, hlines[i][j]);
         }
+}
+
+biome planet::get(double xd, double yd)
+{
+    if(yd < ocean_level)
+        return ocean;
+    return ::get(biome_map, biome_map_width, biome_map_height, xd, yd);
 }

@@ -7,6 +7,7 @@
 #include "dsq.hpp"
 #include "planet.hpp"
 #include "config.h"
+#include "view3d.hpp"
 #include <iostream>
 #include <cstdlib>
 #include <vector>
@@ -83,23 +84,24 @@ int main(int argc, char* argv[])
         return 1;
     }
 #endif
-/*  diamond_square dsq;
-    dsq.data_exists[0] = dsq.data_exists[WIDTH - 1] = dsq.data_exists[(WIDTH - 1LL) << 32] = dsq.data_exists[((WIDTH - 1LL) << 32) + HEIGHT - 1] = true;
-    vector<vector<int> > hlines(WIDTH, vector<int>(HEIGHT));
-    int max_height = 0;
-    int min_height = 0;
-    for(int i = 0; i < WIDTH; i++)
-        for(int j = 0; j < HEIGHT; j++)
-        {
-            hlines[i][j] = min(255, dsq.recursion(i, j, 1, diamond_size));
-            max_height = max(max_height, hlines[i][j]);
-            min_height = min(min_height, hlines[i][j]);
-        }*/
     planet earth;
     earth.ocean_level = OCEAN_LEVEL;
     earth.biome_map = biome_map_earth;
     earth.biome_map_width = earth.biome_map_height = 8;
     earth.generate(seed);
+    earth.center = {0, 0, 2};
+    earth.r = 1;
+    earth.rot_speed = 0.03;
+    vector<planet> data;
+    data.push_back(earth);
+    while(true)
+    {
+#ifdef USE_SDL2
+        char* ptr = buffer;
+#else
+        char* ptr = (char*)screen->pixels;
+#endif
+        view3d(
     double rot_angle = 0;
     double vert_rot = 0;
     double horz_rot_mode = 0;
